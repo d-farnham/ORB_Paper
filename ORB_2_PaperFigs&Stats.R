@@ -458,44 +458,46 @@ RIP_lag_mod = RIP_lag_mod %>% dplyr::select(c(date, RIP, season, model, RIP_lag1
 RIP_lag_obs_long = melt(RIP_lag_obs, id.vars = c("date", "season", "RIP"))
 RIP_lag_mod_long = melt(RIP_lag_mod, id.vars = c("date", "season", "model", "RIP"))
 
-# intialize a blank data.frame to store the conditional probs
-RIP_cond_prob = data.frame(season = c("MAM"),
-													 lag = rep(unique(RIP_lag_obs_long$variable), each = 2),
-													 obs = NA,
-													 mod1 = NA,
-													 mod2 = NA,
-													 mod3 = NA,
-													 mod4 = NA,
-													 mod5 = NA)
+# initialize a blank data.frame to store the conditional probs
+RIP_cond_prob_obs = data.frame(lag = unique(RIP_lag_mod_long$variable),
+                               obs = NA)
+RIP_cond_prob_mod = data.frame(lag = unique(RIP_lag_mod_long$variable),
+                                  mod1 = NA,
+                                  mod2 = NA,
+                                  mod3 = NA,
+                                  mod4 = NA,
+                                  mod5 = NA)
 
-source('R/GetCondProbbySeason.R')
-
-RIP_lag_names = unique(RIP_lag_obs_long$variable)
+RIP_lag_names = unique(RIP_lag_mod_long$variable)
 
 for(llag in 1:2){
-	RIP_cond_prob$obs[(llag*2) - 1] = GetCondProbbySeason(RIP_lag_obs_long$RIP[RIP_lag_obs_long$variable == RIP_lag_names[llag]], 
-																												RIP_lag_obs_long$value[RIP_lag_obs_long$variable == RIP_lag_names[llag]],
-																												RIP_lag_obs_long$season[RIP_lag_obs_long$variable == RIP_lag_names[llag]], 
-																												RIP_cond_prob$season[(llag*2) - 1])
-	
-	RIP_cond_prob$obs[(llag*2)] = GetCondProbbySeason(RIP_lag_obs_long$RIP[RIP_lag_obs_long$variable == RIP_lag_names[llag]], 
-																										RIP_lag_obs_long$value[RIP_lag_obs_long$variable == RIP_lag_names[llag]],
-																										RIP_lag_obs_long$season[RIP_lag_obs_long$variable == RIP_lag_names[llag]], 
-																										RIP_cond_prob$season[(llag*2)])
-	for(mmod in 1:5){
-		RIP_cond_prob[(llag*2) - 1,mmod+3] = GetCondProbbySeason(RIP_lag_mod_long$RIP[RIP_lag_mod_long$model == mmod & RIP_lag_mod_long$variable == RIP_lag_names[llag]], 
-																														 RIP_lag_mod_long$value[RIP_lag_mod_long$model == mmod & RIP_lag_mod_long$variable == RIP_lag_names[llag]],
-																														 RIP_lag_mod_long$season[RIP_lag_mod_long$model == mmod & RIP_lag_mod_long$variable == RIP_lag_names[llag]], 
-																														 RIP_cond_prob$season[(llag*2) - 1])
-		RIP_cond_prob[(llag*2),mmod+3] = GetCondProbbySeason(RIP_lag_mod_long$RIP[RIP_lag_mod_long$model == mmod & RIP_lag_mod_long$variable == RIP_lag_names[llag]], 
-																												 RIP_lag_mod_long$value[RIP_lag_mod_long$model == mmod & RIP_lag_mod_long$variable == RIP_lag_names[llag]],
-																												 RIP_lag_mod_long$season[RIP_lag_mod_long$model == mmod & RIP_lag_mod_long$variable == RIP_lag_names[llag]], 
-																												 RIP_cond_prob$season[(llag*2)])
-	}
+  con_ting_table = table(RIP_lag_obs_long$RIP[RIP_lag_obs_long$variable == RIP_lag_names[llag]], 
+                         RIP_lag_obs_long$value[RIP_lag_obs_long$variable == RIP_lag_names[llag]], 
+                         deparse.level = 2)
+  RIP_cond_prob_obs$obs[llag] = con_ting_table[4]/(con_ting_table[3] + con_ting_table[4])
+  
+    for(mmod in 1:5){
+      con_ting_table = table(RIP_lag_mod_long$RIP[RIP_lag_mod_long$model == mmod &
+                                                      RIP_lag_mod_long$variable == RIP_lag_names[llag]], 
+                             RIP_lag_mod_long$value[RIP_lag_mod_long$model == mmod &
+                                                    RIP_lag_mod_long$variable == RIP_lag_names[llag]], 
+                             deparse.level = 2)
+      
+      RIP_cond_prob_mod[llag,mmod+1] = con_ting_table[4]/(con_ting_table[3] + con_ting_table[4])
+    }
 }
 
 # RIP_mod_CPC_cond_prob$ensemble_mean = apply(RIP_mod_CPC_cond_prob[,4:8], 1, mean)
-RIP_cond_prob_long = melt(RIP_cond_prob, id.vars = c("season","lag")) 
+
+
+RIP_cond_prob_mod_long = melt(RIP_cond_prob_mod, id.vars = c("lag"), variable.name = "model") 
+
+# add the observations to this
+RIP_cond_prob_obs_long = data.frame(model = "obs",
+                                    lag = RIP_cond_prob_obs$lag,
+                                    value = RIP_cond_prob_obs$obs)
+
+RIP_cond_prob_mod_obs_long = rbind(RIP_cond_prob_mod_long,RIP_cond_prob_obs_long)
 
 CPC_marg_probs = 
 	RIP_lag_obs_long %>% dplyr::group_by(season) %>%
@@ -516,21 +518,21 @@ mod_marg_probs =
 
 marg_probs = rbind(mod_marg_probs, CPC_marg_probs)
 
-marg_probs_wide = reshape2::dcast(variable ~ lag, data = marg_probs, value.var	="value")
+marg_probs_wide = reshape2::dcast(variable ~ lag, data = marg_probs, value.va	= "value") 
 
 
-RIP_mod_CPC_cond_marg_prob_long = merge(RIP_cond_prob_long[RIP_cond_prob_long$season == "MAM", ],
-																				marg_probs_wide, by = "variable") %>%
+RIP_mod_CPC_cond_marg_prob_long = merge(RIP_cond_prob_mod_obs_long,
+																				marg_probs_wide, by.x = "model", by.y = "variable") %>%
 	dplyr::mutate(cond_div_marg = value/ marg_prob)
 
 # rename the lag
 RIP_mod_CPC_cond_marg_prob_long = RIP_mod_CPC_cond_marg_prob_long %>% dplyr::mutate(lag_rename = ifelse(lag == "RIP_lag1", "1", "4-7"))
 
-RIP_mod_CPC_cond_marg_prob_long = RIP_mod_CPC_cond_marg_prob_long %>%  dplyr::mutate(model = ifelse(variable == "mod1", "GCM 1",
-																																																		ifelse(variable == "mod2", "GCM 2",
-																																																					 ifelse(variable == "mod3", "GCM 3",
-																																																					 			 ifelse(variable == "mod4", "GCM 4",
-																																																					 			 			 ifelse(variable == "mod5", "GCM 5", "OBS"))))))
+RIP_mod_CPC_cond_marg_prob_long = RIP_mod_CPC_cond_marg_prob_long %>%  dplyr::mutate(model = ifelse(model == "mod1", "GCM 1",
+																																																		ifelse(model == "mod2", "GCM 2",
+																																																					 ifelse(model == "mod3", "GCM 3",
+																																																					 			 ifelse(model == "mod4", "GCM 4",
+																																																					 			 			 ifelse(model == "mod5", "GCM 5", "OBS"))))))
 
 RIP_mod_CPC_cond_marg_prob_long = RIP_mod_CPC_cond_marg_prob_long %>%  dplyr::mutate(variable2 = ifelse(model == "OBS", "OBS", "GCM"))
 
@@ -801,7 +803,7 @@ dev.off()
 ########################################
 ############### Figure S4 ##############
 ########################################
-# now move onto RIP -- same day
+# now move onto RIP
 rm(list = ls())
 load(file = 'Processed_Data/pr_CPC_RIP_same_day.RData')
 load(file = 'Processed_Data/pr_mod_RIP_same_day.RData')
@@ -970,7 +972,7 @@ RIP_event_anom = RIP_event_anom %>% dplyr::group_by(lon,lat,season) %>%
 RIP_event_anom_obs = RIP_event_anom %>% dplyr::mutate(z_700_sig = ifelse(z_700_anom > 0 & prop.pos > sig.level,1,
 																																				 ifelse(z_700_anom < 0 & prop.pos < (1-sig.level),1,0)))
 
-RIP_event_anom_obs$model = "OBS"
+RIP_event_anom_obs$model = "OBS & NCEP/NCAR"
 
 
 # load xtrs from the mod runs
@@ -1586,6 +1588,9 @@ dev.off()
 rm(list = ls())
 load(file = 'Processed_Data/RIP_EWD_MHC_all.RData')
 
+# rename the model
+RIP_EWD_MHC_all = RIP_EWD_MHC_all %>% dplyr::mutate(model = ifelse(model != "OBS", paste0("GCM ", model), model))
+
 alpha = 1
 locfit_fits_MAM = list()
 for(mm in 1:length(unique(RIP_EWD_MHC_all$model))){
@@ -1612,7 +1617,7 @@ locfit_fits_ens_MAM <- locfit(RIP ~ EWD + MHC_anom,
 															alpha = alpha)
 
 
-# now interpolate onto a regular grid BELOW !!!!!! dipole -> dipole.std.anom
+# now interpolate onto a regular grid
 
 grid.size.MHC_anom = 0.75
 grid.size.EWD = 30
@@ -1654,16 +1659,12 @@ for(mm in 1:length(unique(RIP_EWD_MHC_all$model))){
 	colnames(reg_grid_MAM)[mm+2] = unique(RIP_EWD_MHC_all$model)[mm]
 }
 reg_grid_MAM[,9] = predict(locfit_fits_ens_MAM, newdata = reg_grid_MAM)
-colnames(reg_grid_MAM)[9] = "ens"
+colnames(reg_grid_MAM)[9] = "ENS"
 
-reg_grid_MAM = reg_grid_MAM %>% dplyr::mutate("ENS - OBS" = ens - OBS) %>%
-	dplyr::select(-c(ens))
+reg_grid_MAM = reg_grid_MAM %>% dplyr::mutate("ENS - OBS" = ENS - OBS) %>%
+	dplyr::select(-c(ENS))
 
 reg_grid_MAM_long = melt(reg_grid_MAM, id.vars = c("MHC_anom","EWD"))
-reg_grid_MAM_long$season = "MAM"
-
-
-reg_grid_MAM_long$model = factor(reg_grid_MAM_long$variable, levels=c(levels(reg_grid_MAM_long$variable)))
 
 obs_mod_plot = 
 	ggplot() +
@@ -1739,10 +1740,11 @@ RIP_EWD_MHC_all_MAM = RIP_EWD_MHC_all %>% dplyr::mutate(EWD.positive = ifelse(EW
 # fit the model on the observations
 RIP_EWD_MHC_mod = glm(RIP ~  MHC_anom : EWD.positive + factor(RIP_lag1) : EWD, 
 											data = RIP_EWD_MHC_all_MAM[RIP_EWD_MHC_all_MAM$model == "OBS",], family = binomial(link = "logit"))
-# RIP_EWD_MHC_mod = glm(RIP ~  MHC_anom : EWD.positive + RIP_lag1 : EWD  + EWD, 
-# 											data = RIP_EWD_MHC_all_MAM[RIP_EWD_MHC_all_MAM$model == "OBS",], family = binomial(link = "logit"))
 
 summary(RIP_EWD_MHC_mod)
+
+
+
 
 n.sims = 25
 
@@ -1956,8 +1958,6 @@ RIP_cond_prob_mod_df = data.frame(lag = unique(RIP_sim_lag_mod_long$variable),
 RIP_cond_prob_mod_list = list()
 for(nn in 1:n.sims) RIP_cond_prob_mod_list[[nn]] = RIP_cond_prob_mod_df
 
-source('GetCondProbbySeason.R')
-
 RIP_lag_names = unique(RIP_sim_lag_mod_long$variable)
 
 for(llag in 1:2){
@@ -1970,8 +1970,6 @@ for(llag in 1:2){
 		ssim = unique(RIP_sim_lag_mod_long$sim)[ss]
 		
 		for(mmod in 1:5){
-			
-			
 			con_ting_table = table(RIP_sim_lag_mod_long$RIP_sim[RIP_sim_lag_mod_long$model == mmod & 
 																														RIP_sim_lag_mod_long$sim == ssim &
 																														RIP_sim_lag_mod_long$variable == RIP_lag_names[llag]], 
