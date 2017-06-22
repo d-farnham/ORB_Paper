@@ -3,7 +3,7 @@
 This repository provides all codes that accompany the paper: **_Regional intense precipitation events: robust inference from
 credibly simulated GCM state variables_**
 
-This code has been tested in **R** version version 3.3.3 **RStudio** version 1.0.136. The scripts' compatability with other versions is unknown.
+This code has been tested in **R** version version 3.3.3 **RStudio** version 1.0.136. The scripts' compatibility with other versions is unknown.
 
 Requirements: the following **R** packages (and any dependencies) are necessary and should be installed before attempting to
 compile these codes: "akima", "dataRetrieval", "data.table", "dplyr", "ggmap", "ggplot2", "gridExtra", "locfit", "lubridate", "maps", "ncdf4", "readr", "reshape2", "tidyr".
