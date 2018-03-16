@@ -1,5 +1,5 @@
 {
-    "path" : "~/Google Drive/ORB_Paper/Final figures/REVISED",
+    "path" : "~/Google Drive/ORB_Paper/Processed_Data",
     "sortOrder" : [
         {
             "ascending" : false,
@@ -7,11 +7,11 @@
         },
         {
             "ascending" : false,
-            "columnIndex" : 3
+            "columnIndex" : 2
         },
         {
-            "ascending" : true,
-            "columnIndex" : 2
+            "ascending" : false,
+            "columnIndex" : 3
         }
     ]
 }
