@@ -47,7 +47,7 @@ source('R/combine_indices.R') # make Fig 7
 source('R/fit_historic_model_and_check.R') # make Figs S8, S9
 
 # fit the model ont he full historic record and compare the wavelet to the observed record
-source('R/fit_full_historic_model_and_check.R') # make Fig S8, S9, S10
+source('R/fit_full_historic_model_and_check.R') # make Fig S10
 
 # now simulate the historical record for the GCM and check the lag1
 source('R/sim_historic_model.R') # make Fig 8

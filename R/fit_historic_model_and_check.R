@@ -192,8 +192,8 @@ REP_sim_yearly_both_binned = REP_sim_yearly_both %>% dplyr::group_by(sample, REP
 
 yearly_train_test = 
   ggplot(REP_sim_yearly_both_binned, aes(REP, factor(REPs))) +
-  geom_tile(aes(fill = REPs_prop*100)) +
-  scale_fill_gradient(name = "%", low = "white", high = "black") +
+  geom_tile(aes(fill = REPs_prop)) +
+  scale_fill_gradient(name = "", low = "white", high = "black") +
   geom_abline(aes(slope = 1, intercept = 1, col = sample), linetype = "dashed") +
   theme_bw() +
   labs(x = "# REPs observed in year",
